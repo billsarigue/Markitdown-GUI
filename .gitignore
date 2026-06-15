@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# SvelteKit build
+.svelte-kit/
+dist/
+build/
+
+# Tauri
+src-tauri/target/
+src-tauri/binaries/
+
+# Python
+__pycache__/
+*.py[cod]
+python-sidecar/dist/
+python-sidecar/build/
+python-sidecar/*.spec
+.venv/
+venv/
+
+# Misc
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
