@@ -1,5 +1,7 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
+  import { save } from '@tauri-apps/plugin-dialog';
+  import { writeTextFile } from '@tauri-apps/plugin-fs';
   import DropZone from '$lib/components/DropZone.svelte';
   import MarkdownPreview from '$lib/components/MarkdownPreview.svelte';
 
@@ -7,6 +9,8 @@
   let markdown = '';
   let isLoading = false;
   let error = '';
+  let isSaving = false;
+  let savedPath = '';
 
   type ConvertResult = {
     success: boolean;
@@ -19,6 +23,7 @@
     selectedFiles = event.detail.paths;
     markdown = '';
     error = '';
+    savedPath = '';
 
     if (selectedFiles.length === 0) return;
 
@@ -28,7 +33,6 @@
       const result = await invoke<ConvertResult>('convert_file', {
         options: {
           input_path: selectedFiles[0],
-          enable_plugins: false,
         },
       });
 
@@ -42,6 +46,34 @@
       error = `Erro ao converter arquivo: ${String(e)}`;
     } finally {
       isLoading = false;
+    }
+  }
+
+  async function handleSave() {
+    if (!markdown) return;
+
+    isSaving = true;
+    savedPath = '';
+
+    try {
+      // Sugere o mesmo nome do arquivo original, com extensão .md
+      const originalName = selectedFiles[0]
+        ? selectedFiles[0].split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? 'documento'
+        : 'documento';
+
+      const filePath = await save({
+        defaultPath: `${originalName}.md`,
+        filters: [{ name: 'Markdown', extensions: ['md'] }],
+      });
+
+      if (!filePath) return; // usuário cancelou
+
+      await writeTextFile(filePath, markdown);
+      savedPath = filePath;
+    } catch (e) {
+      error = `Erro ao salvar arquivo: ${String(e)}`;
+    } finally {
+      isSaving = false;
     }
   }
 </script>
@@ -73,7 +105,14 @@
       {/if}
     </section>
 
-    <MarkdownPreview {markdown} {isLoading} {error} />
+    <MarkdownPreview
+      {markdown}
+      {isLoading}
+      {error}
+      {isSaving}
+      {savedPath}
+      on:save={handleSave}
+    />
   </div>
 </div>
 

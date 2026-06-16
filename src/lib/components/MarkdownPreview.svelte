@@ -1,12 +1,31 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
+
   export let markdown = '';
   export let isLoading = false;
   export let error = '';
+  export let isSaving = false;
+  export let savedPath = '';
+
+  const dispatch = createEventDispatcher<{ save: void }>();
 </script>
 
 <section class="preview">
   <div class="header">
     <h2>Markdown</h2>
+    {#if markdown}
+      <button
+        class="save-btn"
+        disabled={isSaving}
+        on:click={() => dispatch('save')}
+      >
+        {#if isSaving}
+          Salvando...
+        {:else}
+          💾 Salvar .md
+        {/if}
+      </button>
+    {/if}
   </div>
 
   {#if isLoading}
@@ -15,6 +34,9 @@
     <div class="state error">{error}</div>
   {:else if markdown}
     <textarea readonly value={markdown}></textarea>
+    {#if savedPath}
+      <p class="saved-notice">✅ Arquivo salvo em: {savedPath}</p>
+    {/if}
   {:else}
     <div class="state muted">O conteúdo convertido aparecerá aqui.</div>
   {/if}
@@ -32,6 +54,9 @@
   }
 
   .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 0.75rem;
   }
 
@@ -39,6 +64,26 @@
     margin: 0;
     color: #e2e8f0;
     font-size: 1.2rem;
+  }
+
+  .save-btn {
+    background: #1d4ed8;
+    color: #f8fafc;
+    border: none;
+    border-radius: 8px;
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .save-btn:hover:not(:disabled) {
+    background: #2563eb;
+  }
+
+  .save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   textarea {
@@ -75,5 +120,12 @@
   .error {
     background: #2a1111;
     color: #fecaca;
+  }
+
+  .saved-notice {
+    margin-top: 0.75rem;
+    color: #86efac;
+    font-size: 0.9rem;
+    word-break: break-all;
   }
 </style>
