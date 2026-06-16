@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tauri::Emitter;
 use tauri_plugin_shell::ShellExt;
 
 // ── Tipos de comunicação com o sidecar ──────────────────────────────────────
@@ -24,6 +25,7 @@ pub struct ConvertOptions {
     pub llm_endpoint: Option<String>,
     pub llm_deployment: Option<String>,
     pub llm_api_key: Option<String>,
+    pub llm_model: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,9 +50,9 @@ async fn convert_file(
     }
 
     if let (Some(endpoint), Some(deployment), Some(api_key)) = (
-        options.llm_endpoint,
-        options.llm_deployment,
-        options.llm_api_key,
+        options.llm_endpoint.clone(),
+        options.llm_deployment.clone(),
+        options.llm_api_key.clone(),
     ) {
         args.push("--llm-endpoint".to_string());
         args.push(endpoint);
@@ -58,6 +60,14 @@ async fn convert_file(
         args.push(deployment);
         args.push("--llm-api-key".to_string());
         args.push(api_key);
+    } else if let Some(ref api_key) = options.llm_api_key {
+        // OpenAI direto (sem endpoint Azure)
+        args.push("--llm-api-key".to_string());
+        args.push(api_key.clone());
+        if let Some(ref model) = options.llm_model {
+            args.push("--llm-model".to_string());
+            args.push(model.clone());
+        }
     }
 
     let shell = app.shell();
@@ -130,7 +140,12 @@ async fn pick_files(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     }
 }
 
-// ── Entry point (chamado pelo main.rs) ─────────────────────────────────────
+// ── Entry point ───────────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize)]
+struct DragDropPayload {
+    paths: Vec<String>,
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -138,6 +153,33 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::DragDrop(drag_event) = event {
+                match drag_event {
+                    tauri::DragDropEvent::Enter { paths, position: _ } => {
+                        let paths_str: Vec<String> = paths
+                            .iter()
+                            .map(|p| p.to_string_lossy().to_string())
+                            .collect();
+                        let _ = window.emit("tauri://drag-enter", DragDropPayload { paths: paths_str });
+                    }
+                    tauri::DragDropEvent::Over { position: _ } => {
+                        let _ = window.emit("tauri://drag-over", ());
+                    }
+                    tauri::DragDropEvent::Drop { paths, position: _ } => {
+                        let paths_str: Vec<String> = paths
+                            .iter()
+                            .map(|p| p.to_string_lossy().to_string())
+                            .collect();
+                        let _ = window.emit("tauri://drag-drop", DragDropPayload { paths: paths_str });
+                    }
+                    tauri::DragDropEvent::Leave => {
+                        let _ = window.emit("tauri://drag-leave", ());
+                    }
+                    _ => {}
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![convert_file, pick_files])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");
