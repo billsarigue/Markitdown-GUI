@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { open } from '@tauri-apps/plugin-dialog';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
 
-  const dispatch = createEventDispatcher<{
-    filesSelected: { paths: string[] };
-  }>();
+  const dispatch = createEventDispatcher<{ filesSelected: { paths: string[] } }>();
 
   let isDragging = false;
   let error = '';
+  let unlisten: (() => void) | null = null;
 
   const allowedExtensions = [
     'pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls',
@@ -21,102 +21,74 @@
     return !!ext && allowedExtensions.includes(ext);
   }
 
-  function normalizeDroppedFiles(fileList: FileList | null): string[] {
-    if (!fileList) return [];
-
-    return Array.from(fileList)
-      .map((file) => (file as File & { path?: string }).path || file.name)
-      .filter(Boolean);
-  }
-
   function validatePaths(paths: string[]) {
     const valid = paths.filter(isSupported);
     const invalid = paths.filter((p) => !isSupported(p));
-
-    if (invalid.length > 0) {
-      error = `Alguns arquivos foram ignorados por tipo não suportado: ${invalid.join(', ')}`;
-    } else {
-      error = '';
-    }
-
-    if (valid.length > 0) {
-      dispatch('filesSelected', { paths: valid });
-    }
+    error = invalid.length > 0
+      ? `Tipo não suportado: ${invalid.map(p => p.split(/[\\/]/).pop()).join(', ')}`
+      : '';
+    if (valid.length > 0) dispatch('filesSelected', { paths: valid });
   }
 
-  function onDragEnter(event: DragEvent) {
-    event.preventDefault();
-    isDragging = true;
-  }
+  onMount(async () => {
+    const appWindow = getCurrentWindow();
+    unlisten = await appWindow.onDragDropEvent((event) => {
+      if (event.payload.type === 'over') {
+        isDragging = true;
+      } else if (event.payload.type === 'drop') {
+        isDragging = false;
+        validatePaths(event.payload.paths);
+      } else {
+        isDragging = false;
+      }
+    });
+  });
 
-  function onDragOver(event: DragEvent) {
-    event.preventDefault();
-    isDragging = true;
-  }
+  onDestroy(() => { unlisten?.(); });
 
-  function onDragLeave(event: DragEvent) {
-    event.preventDefault();
-    isDragging = false;
-  }
-
-  function onDrop(event: DragEvent) {
-    event.preventDefault();
-    isDragging = false;
-
-    const paths = normalizeDroppedFiles(event.dataTransfer?.files ?? null);
-    validatePaths(paths);
-  }
+  // Previne o comportamento padrão do browser de abrir o arquivo
+  function onDragOver(e: DragEvent) { e.preventDefault(); }
+  function onDragLeave() { isDragging = false; }
 
   async function pickFiles() {
     try {
       const selected = await open({
         multiple: true,
-        filters: [
-          {
-            name: 'Supported files',
-            extensions: allowedExtensions,
-          },
-        ],
+        filters: [{ name: 'Supported files', extensions: allowedExtensions }],
       });
-
       if (!selected) return;
-
-      const paths = Array.isArray(selected) ? selected : [selected];
-      validatePaths(paths);
+      validatePaths(Array.isArray(selected) ? selected : [selected]);
     } catch (e) {
-      error = `Erro ao abrir seletor de arquivos: ${String(e)}`;
+      error = `Erro ao abrir seletor: ${String(e)}`;
     }
   }
 </script>
 
 <div
-  class:is-dragging={isDragging}
   class="dropzone"
-  on:dragenter={onDragEnter}
+  class:is-dragging={isDragging}
   on:dragover={onDragOver}
   on:dragleave={onDragLeave}
-  on:drop={onDrop}
   role="button"
   tabindex="0"
   on:click={pickFiles}
   on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && pickFiles()}
 >
   <div class="content">
+    <div class="icon">📄</div>
     <h2>Arraste arquivos aqui</h2>
     <p>ou clique para selecionar</p>
-    <small>
-      Suporta PDF, Word, PowerPoint, Excel, HTML, TXT, CSV, JSON, XML, imagens, ZIP e EPUB.
-    </small>
+    <small>PDF, Word, PowerPoint, Excel, HTML, TXT, CSV, JSON, XML, imagens, ZIP, EPUB</small>
   </div>
 </div>
 
 {#if error}
-  <p class="error">{error}</p>
+  <p class="drop-error">{error}</p>
 {/if}
 
 <style>
   .dropzone {
-    border: 2px dashed #7c8aa5;
+    border: 2px dashed rgba(99, 130, 180, 0.35);
     border-radius: 16px;
     padding: 3rem 1.5rem;
     display: flex;
@@ -124,41 +96,36 @@
     justify-content: center;
     text-align: center;
     cursor: pointer;
-    background: #111827;
+    background: rgba(255, 255, 255, 0.02);
     color: #f3f4f6;
     transition: all 0.2s ease;
     min-height: 240px;
   }
 
   .dropzone:hover {
-    border-color: #60a5fa;
-    background: #172033;
+    border-color: rgba(96, 165, 250, 0.6);
+    background: rgba(59, 130, 246, 0.05);
   }
 
   .dropzone.is-dragging {
     border-color: #22c55e;
-    background: #13261a;
+    background: rgba(34, 197, 94, 0.06);
     transform: scale(1.01);
   }
 
-  .content h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.5rem;
-  }
+  .content { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
 
-  .content p {
-    margin: 0 0 0.75rem;
-    color: #cbd5e1;
-  }
+  .icon { font-size: 2.5rem; margin-bottom: 0.25rem; }
 
-  .content small {
-    color: #94a3b8;
-    line-height: 1.4;
-  }
+  .content h2 { margin: 0; font-size: 1.3rem; font-weight: 600; }
 
-  .error {
-    margin-top: 0.75rem;
+  .content p { margin: 0; color: #94a3b8; font-size: 0.95rem; }
+
+  .content small { color: #64748b; line-height: 1.5; font-size: 0.82rem; }
+
+  .drop-error {
+    margin-top: 0.5rem;
     color: #fca5a5;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
   }
 </style>
