@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use tauri::Emitter;
 use tauri_plugin_shell::ShellExt;
 
 // ── Tipos de comunicação com o sidecar ──────────────────────────────────────
@@ -139,13 +138,6 @@ async fn pick_files(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     }
 }
 
-// ── Payload para eventos de drag-drop ───────────────────────────────────────
-
-#[derive(Clone, Serialize)]
-struct DragDropPayload {
-    paths: Vec<String>,
-}
-
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -154,30 +146,6 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::DragDrop(drag_event) = event {
-                match drag_event {
-                    tauri::DragDropEvent::Enter { paths, .. } => {
-                        let paths_str: Vec<String> = paths
-                            .iter()
-                            .map(|p| p.to_string_lossy().to_string())
-                            .collect();
-                        let _ = window.emit("tauri://drag-enter", DragDropPayload { paths: paths_str });
-                    }
-                    tauri::DragDropEvent::Drop { paths, .. } => {
-                        let paths_str: Vec<String> = paths
-                            .iter()
-                            .map(|p| p.to_string_lossy().to_string())
-                            .collect();
-                        let _ = window.emit("tauri://drag-drop", DragDropPayload { paths: paths_str });
-                    }
-                    tauri::DragDropEvent::Leave => {
-                        let _ = window.emit("tauri://drag-leave", ());
-                    }
-                    _ => {}
-                }
-            }
-        })
         .invoke_handler(tauri::generate_handler![convert_file, pick_files])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");
