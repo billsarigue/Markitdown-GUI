@@ -7,19 +7,29 @@
   async function toggleMaximize() { await appWindow.toggleMaximize(); }
   async function close() { await appWindow.close(); }
 
+  let lastClickTime = 0;
+  const DBLCLICK_MS = 300;
+
   async function onMousedown(e: MouseEvent) {
     if ((e.target as HTMLElement).closest('button')) return;
-    await appWindow.startDragging();
-  }
 
-  async function onDblclick(e: MouseEvent) {
-    if ((e.target as HTMLElement).closest('button')) return;
-    await toggleMaximize();
+    const now = Date.now();
+    const gap = now - lastClickTime;
+    lastClickTime = now;
+
+    if (gap < DBLCLICK_MS) {
+      // Duplo clique detectado manualmente
+      lastClickTime = 0;
+      await toggleMaximize();
+      return;
+    }
+
+    await appWindow.startDragging();
   }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="titlebar" on:mousedown={onMousedown} on:dblclick={onDblclick}>
+<div class="titlebar" on:mousedown={onMousedown}>
   <span class="app-name">Markitdown GUI</span>
   <div class="titlebar-controls">
     <button class="dot minimize" on:click|stopPropagation={minimize} title="Minimizar"></button>
