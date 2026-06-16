@@ -21,7 +21,6 @@ enum SidecarResponse {
 pub struct ConvertOptions {
     pub input_path: String,
     pub output_path: Option<String>,
-    pub enable_plugins: Option<bool>,
     pub llm_endpoint: Option<String>,
     pub llm_deployment: Option<String>,
     pub llm_api_key: Option<String>,
@@ -46,10 +45,6 @@ async fn convert_file(
 
     if let Some(ref out) = options.output_path {
         args.push(out.clone());
-    }
-
-    if options.enable_plugins.unwrap_or(false) {
-        args.push("--enable-plugins".to_string());
     }
 
     if let (Some(endpoint), Some(deployment), Some(api_key)) = (
@@ -142,6 +137,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![convert_file, pick_files])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");

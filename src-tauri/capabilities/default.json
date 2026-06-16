@@ -18,6 +18,8 @@
     },
     "shell:allow-open",
     "dialog:allow-open",
-    "dialog:allow-save"
+    "dialog:allow-save",
+    "fs:allow-write-text-file",
+    "fs:allow-app-write"
   ]
 }
