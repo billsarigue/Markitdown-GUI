@@ -11,10 +11,15 @@
     if ((e.target as HTMLElement).closest('button')) return;
     await appWindow.startDragging();
   }
+
+  async function onDblclick(e: MouseEvent) {
+    if ((e.target as HTMLElement).closest('button')) return;
+    await toggleMaximize();
+  }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="titlebar" on:mousedown={onMousedown}>
+<div class="titlebar" on:mousedown={onMousedown} on:dblclick={onDblclick}>
   <span class="app-name">Markitdown GUI</span>
   <div class="titlebar-controls">
     <button class="dot minimize" on:click|stopPropagation={minimize} title="Minimizar"></button>
