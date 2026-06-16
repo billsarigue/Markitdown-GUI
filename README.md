@@ -1,11 +1,17 @@
 # Markitdown-GUI
+<br>
 
+<div align="center">
 
-#
+<img src="assets/Markitdown-GUI.png" alt="Markitdown-GUI Banner" width="100%">
+
+</div>
+
+<br>
 
 ### Transforme qualquer documento em Markdown com uma interface moderna e intuitiva.
 
-Frontend desktop construído com **Tauri + Svelte** para o poderoso **MarkItDown** da Microsoft.
+Frontend desktop construído com **Tauri + Svelte** para o **MarkItDown** da Microsoft.
 <br>
 
 
