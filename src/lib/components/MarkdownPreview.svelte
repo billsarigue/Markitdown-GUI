@@ -6,32 +6,48 @@
   export let error = '';
   export let isSaving = false;
   export let savedPath = '';
+  export let hasLlm = false;
 
-  const dispatch = createEventDispatcher<{ save: void }>();
+  const dispatch = createEventDispatcher<{ save: void; openSettings: void }>();
+
+  const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
+  export let currentFile = '';
+
+  $: isImage = IMAGE_EXTS.some(ext =>
+    currentFile.toLowerCase().endsWith(`.${ext}`)
+  );
+  $: emptyImage = isImage && !isLoading && !error && markdown === '';
 </script>
 
 <section class="preview">
   <div class="header">
     <h2>Markdown</h2>
-    {#if markdown}
-      <button
-        class="save-btn"
-        disabled={isSaving}
-        on:click={() => dispatch('save')}
-      >
-        {#if isSaving}
-          Salvando...
-        {:else}
-          💾 Salvar .md
-        {/if}
+    <div class="header-actions">
+      <button class="settings-btn" on:click={() => dispatch('openSettings')} title="Configurar LLM">
+        ⚙️ {hasLlm ? 'LLM ativo' : 'LLM'}
       </button>
-    {/if}
+      {#if markdown}
+        <button class="save-btn" disabled={isSaving} on:click={() => dispatch('save')}>
+          {isSaving ? 'Salvando...' : '💾 Salvar .md'}
+        </button>
+      {/if}
+    </div>
   </div>
 
   {#if isLoading}
     <div class="state muted">Convertendo arquivo...</div>
   {:else if error}
     <div class="state error">{error}</div>
+  {:else if emptyImage}
+    <div class="state warning">
+      <div>
+        <p>🖼️ Nenhum conteúdo extraído desta imagem.</p>
+        <p>
+          Imagens requerem um LLM (OpenAI / Azure) para gerar descrição via visão.
+          <button class="link-btn" on:click={() => dispatch('openSettings')}>Configurar agora →</button>
+        </p>
+      </div>
+    </div>
   {:else if markdown}
     <textarea readonly value={markdown}></textarea>
     {#if savedPath}
@@ -66,6 +82,12 @@
     font-size: 1.2rem;
   }
 
+  .header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
   .save-btn {
     background: #1d4ed8;
     color: #f8fafc;
@@ -77,14 +99,21 @@
     transition: background 0.15s ease;
   }
 
-  .save-btn:hover:not(:disabled) {
-    background: #2563eb;
+  .save-btn:hover:not(:disabled) { background: #2563eb; }
+  .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .settings-btn {
+    background: transparent;
+    color: #64748b;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
   }
 
-  .save-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  .settings-btn:hover { color: #94a3b8; border-color: #334155; }
 
   textarea {
     width: 100%;
@@ -99,6 +128,7 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 0.95rem;
     line-height: 1.5;
+    box-sizing: border-box;
   }
 
   .state {
@@ -108,18 +138,29 @@
     justify-content: center;
     text-align: center;
     border-radius: 12px;
-    padding: 1rem;
+    padding: 1.5rem;
     min-height: 360px;
   }
 
-  .muted {
-    background: #111827;
-    color: #94a3b8;
+  .muted { background: #111827; color: #94a3b8; }
+  .error { background: #2a1111; color: #fecaca; }
+
+  .warning {
+    background: #1c1a09;
+    color: #fde68a;
+    flex-direction: column;
   }
 
-  .error {
-    background: #2a1111;
-    color: #fecaca;
+  .warning p { margin: 0.25rem 0; }
+
+  .link-btn {
+    background: none;
+    border: none;
+    color: #60a5fa;
+    cursor: pointer;
+    font-size: inherit;
+    padding: 0;
+    text-decoration: underline;
   }
 
   .saved-notice {
