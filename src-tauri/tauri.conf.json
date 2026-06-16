@@ -22,7 +22,8 @@
         "center": true,
         "decorations": false,
         "transparent": true,
-        "shadow": true
+        "shadow": true,
+        "fileDropEnabled": true
       }
     ],
     "security": {
