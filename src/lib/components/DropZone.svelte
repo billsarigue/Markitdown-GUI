@@ -1,13 +1,15 @@
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { open } from '@tauri-apps/plugin-dialog';
-  import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { listen } from '@tauri-apps/api/event';
 
   const dispatch = createEventDispatcher<{ filesSelected: { paths: string[] } }>();
 
   let isDragging = false;
   let error = '';
-  let unlisten: (() => void) | null = null;
+  let unlistenDrop: (() => void) | null = null;
+  let unlistenOver: (() => void) | null = null;
+  let unlistenLeave: (() => void) | null = null;
 
   const allowedExtensions = [
     'pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls',
@@ -25,30 +27,25 @@
     const valid = paths.filter(isSupported);
     const invalid = paths.filter((p) => !isSupported(p));
     error = invalid.length > 0
-      ? `Tipo não suportado: ${invalid.map(p => p.split(/[\\/]/).pop()).join(', ')}`
+      ? `Tipo n\u00e3o suportado: ${invalid.map(p => p.split(/[\\/]/).pop()).join(', ')}`
       : '';
     if (valid.length > 0) dispatch('filesSelected', { paths: valid });
   }
 
   onMount(async () => {
-    const appWindow = getCurrentWindow();
-    unlisten = await appWindow.onDragDropEvent((event) => {
-      if (event.payload.type === 'over') {
-        isDragging = true;
-      } else if (event.payload.type === 'drop') {
-        isDragging = false;
-        validatePaths(event.payload.paths);
-      } else {
-        isDragging = false;
-      }
+    unlistenOver  = await listen('tauri://drag-enter', () => { isDragging = true; });
+    unlistenLeave = await listen('tauri://drag-leave', () => { isDragging = false; });
+    unlistenDrop  = await listen<{ paths: string[] }>('tauri://drag-drop', (e) => {
+      isDragging = false;
+      validatePaths(e.payload.paths);
     });
   });
 
-  onDestroy(() => { unlisten?.(); });
-
-  // Previne o comportamento padrão do browser de abrir o arquivo
-  function onDragOver(e: DragEvent) { e.preventDefault(); }
-  function onDragLeave() { isDragging = false; }
+  onDestroy(() => {
+    unlistenDrop?.();
+    unlistenOver?.();
+    unlistenLeave?.();
+  });
 
   async function pickFiles() {
     try {
@@ -67,8 +64,6 @@
 <div
   class="dropzone"
   class:is-dragging={isDragging}
-  on:dragover={onDragOver}
-  on:dragleave={onDragLeave}
   role="button"
   tabindex="0"
   on:click={pickFiles}
@@ -114,13 +109,9 @@
   }
 
   .content { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
-
   .icon { font-size: 2.5rem; margin-bottom: 0.25rem; }
-
   .content h2 { margin: 0; font-size: 1.3rem; font-weight: 600; }
-
   .content p { margin: 0; color: #94a3b8; font-size: 0.95rem; }
-
   .content small { color: #64748b; line-height: 1.5; font-size: 0.82rem; }
 
   .drop-error {
