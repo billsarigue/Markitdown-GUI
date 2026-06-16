@@ -25,7 +25,6 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "fs:allow-write-text-file",
-    "fs:allow-app-write",
-    "drag-drop:allow-drag-drop"
+    "fs:allow-app-write"
   ]
 }
