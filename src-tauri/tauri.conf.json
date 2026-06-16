@@ -39,19 +39,5 @@
     "externalBin": [
       "binaries/markitdown"
     ]
-  },
-  "plugins": {
-    "shell": {
-      "open": true,
-      "sidecar": true,
-      "scope": [
-        {
-          "name": "markitdown",
-          "sidecar": true,
-          "args": true
-        }
-      ]
-    },
-    "dialog": {}
   }
 }
