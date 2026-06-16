@@ -1,11 +1,15 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import { open } from '@tauri-apps/plugin-dialog';
+  import { listen } from '@tauri-apps/api/event';
 
   const dispatch = createEventDispatcher<{ filesSelected: { paths: string[] } }>();
 
   let isDragging = false;
   let error = '';
+  let unlistenDrop: (() => void) | null = null;
+  let unlistenEnter: (() => void) | null = null;
+  let unlistenLeave: (() => void) | null = null;
 
   const allowedExtensions = [
     'pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls',
@@ -28,27 +32,30 @@
     if (valid.length > 0) dispatch('filesSelected', { paths: valid });
   }
 
+  // Previne o bloqueio do WebView2 no dragover
   function onDragOver(e: DragEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-    isDragging = true;
   }
 
-  function onDragLeave(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    isDragging = false;
-  }
+  onMount(async () => {
+    unlistenEnter = await listen<{ paths: string[] }>('drag-enter', () => {
+      isDragging = true;
+    });
+    unlistenLeave = await listen('drag-leave', () => {
+      isDragging = false;
+    });
+    unlistenDrop = await listen<{ paths: string[] }>('drag-drop', (e) => {
+      isDragging = false;
+      validatePaths(e.payload.paths);
+    });
+  });
 
-  function onDrop(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    isDragging = false;
-    if (!e.dataTransfer) return;
-    const paths = Array.from(e.dataTransfer.files).map((f) => (f as any).path ?? f.name);
-    if (paths.length > 0) validatePaths(paths);
-  }
+  onDestroy(() => {
+    unlistenDrop?.();
+    unlistenEnter?.();
+    unlistenLeave?.();
+  });
 
   async function pickFiles() {
     try {
@@ -70,8 +77,6 @@
   role="button"
   tabindex="0"
   on:dragover={onDragOver}
-  on:dragleave={onDragLeave}
-  on:drop={onDrop}
   on:click={pickFiles}
   on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && pickFiles()}
 >
