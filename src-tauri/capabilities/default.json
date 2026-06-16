@@ -6,7 +6,16 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "shell:allow-execute",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "markitdown",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    },
     "shell:allow-open",
     "dialog:allow-open",
     "dialog:allow-save"
