@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Markitdown wrapper for Tauri sidecar.
-Usage: markitdown_wrapper <input_file> [output_file] [--enable-plugins] [--llm-endpoint URL] [--llm-deployment NAME]
+Usage: markitdown_wrapper <input_file> [output_file] [--llm-endpoint URL] [--llm-deployment NAME] [--llm-api-key KEY]
 """
 
 import sys
@@ -15,7 +15,6 @@ def main():
     parser = argparse.ArgumentParser(description="Convert files to Markdown via MarkItDown")
     parser.add_argument("input", help="Path to the input file")
     parser.add_argument("output", nargs="?", default=None, help="Path to the output .md file (optional)")
-    parser.add_argument("--enable-plugins", action="store_true", help="Enable MarkItDown plugins")
     parser.add_argument("--llm-endpoint", default=None, help="Azure OpenAI endpoint for image analysis")
     parser.add_argument("--llm-deployment", default=None, help="Azure OpenAI deployment name")
     parser.add_argument("--llm-api-key", default=None, help="API key for LLM")
@@ -27,7 +26,7 @@ def main():
         sys.exit(1)
 
     try:
-        kwargs = {"enable_plugins": args.enable_plugins}
+        kwargs = {}
 
         if args.llm_endpoint and args.llm_deployment and args.llm_api_key:
             from openai import AzureOpenAI
