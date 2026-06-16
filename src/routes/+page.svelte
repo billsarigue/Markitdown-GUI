@@ -27,8 +27,8 @@
     try {
       const result = await invoke<ConvertResult>('convert_file', {
         options: {
-          inputPath: selectedFiles[0],
-          enablePlugins: false,
+          input_path: selectedFiles[0],
+          enable_plugins: false,
         },
       });
 
