@@ -3,26 +3,24 @@
 
   const appWindow = getCurrentWindow();
 
-  function minimize() { appWindow.minimize(); }
-  function toggleMaximize() { appWindow.toggleMaximize(); }
-  function close() { appWindow.close(); }
+  async function minimize() { await appWindow.minimize(); }
+  async function toggleMaximize() { await appWindow.toggleMaximize(); }
+  async function close() { await appWindow.close(); }
 
-  function onMousedown(e: MouseEvent) {
-    // Inicia drag apenas se o clique não foi num botão
+  async function onMousedown(e: MouseEvent) {
     if ((e.target as HTMLElement).closest('button')) return;
-    appWindow.startDragging();
+    await appWindow.startDragging();
   }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="titlebar" on:mousedown={onMousedown}>
-  <div class="titlebar-controls">
-    <button class="dot minimize" on:click={minimize} title="Minimizar"></button>
-    <button class="dot maximize" on:click={toggleMaximize} title="Maximizar"></button>
-    <button class="dot close" on:click={close} title="Fechar"></button>
-  </div>
   <span class="app-name">Markitdown GUI</span>
-  <div class="titlebar-spacer"></div>
+  <div class="titlebar-controls">
+    <button class="dot minimize" on:click|stopPropagation={minimize} title="Minimizar"></button>
+    <button class="dot maximize" on:click|stopPropagation={toggleMaximize} title="Maximizar"></button>
+    <button class="dot close" on:click|stopPropagation={close} title="Fechar"></button>
+  </div>
 </div>
 
 <style>
@@ -30,6 +28,7 @@
     height: 42px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 0 1rem;
     border-radius: 14px 14px 0 0;
     background: rgba(2, 11, 30, 0.6);
@@ -40,9 +39,6 @@
   }
 
   .app-name {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
     font-size: 0.82rem;
     font-weight: 600;
     color: #475569;
@@ -54,11 +50,6 @@
     display: flex;
     gap: 0.45rem;
     align-items: center;
-    z-index: 1;
-  }
-
-  .titlebar-spacer {
-    flex: 1;
   }
 
   .dot {
