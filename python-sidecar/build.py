@@ -20,12 +20,8 @@ TARGET_TRIPLES = {
     ("Darwin", "arm64"): "aarch64-apple-darwin",
 }
 
-def get_target_triple():
-    """Get the target triple for the current platform.
 
-    This is used to name the output binary correctly for Tauri
-    sidecar usage.
-    """
+def get_target_triple():
     system = platform.system()
     machine = platform.machine()
     triple = TARGET_TRIPLES.get((system, machine))
@@ -34,13 +30,8 @@ def get_target_triple():
         sys.exit(1)
     return triple
 
-def main():
-    """Build the sidecar binary and copy it to the Tauri binaries dir.
 
-    Uses PyInstaller to create a standalone executable from
-    markitdown_wrapper.py and copies it to src-tauri/binaries/ with
-    the correct name for the current target triple.
-    """
+def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     repo_root = os.path.dirname(script_dir)
     binaries_dir = os.path.join(repo_root, "src-tauri", "binaries")
@@ -53,12 +44,17 @@ def main():
     print(f"[build.py] Target triple: {triple}")
     print(f"[build.py] Output binary: {binary_name}")
 
+    # Remove stale .spec to prevent PyInstaller from reusing old config
+    spec_file = os.path.join(script_dir, "markitdown-sidecar.spec")
+    if os.path.exists(spec_file):
+        os.remove(spec_file)
+        print("[build.py] Removed stale .spec file")
+
     subprocess.run(
         [
             sys.executable, "-m", "PyInstaller",
             "--onefile",
             "--clean",
-            "--version-file", os.path.join(script_dir, "version_info.txt"),
             "--noconfirm",
             "--name", "markitdown-sidecar",
             os.path.join(script_dir, "markitdown_wrapper.py"),
