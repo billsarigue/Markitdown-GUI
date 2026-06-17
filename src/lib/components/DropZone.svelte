@@ -32,7 +32,7 @@
     if (valid.length > 0) dispatch('filesSelected', { paths: valid });
   }
 
-  // Previne o bloqueio do WebView2 no dragover
+  // Necessário para o cursor não mostrar 🚫 no WebView2
   function onDragOver(e: DragEvent) {
     e.preventDefault();
     e.stopPropagation();
