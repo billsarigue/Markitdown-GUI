@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Markitdown GUI",
   "version": "0.1.0",
-  "identifier": "com.markitdown-gui.app",
+  "identifier": "com.zionlux.markitdown-gui",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -43,6 +43,39 @@
     ],
     "externalBin": [
       "binaries/markitdown"
-    ]
+    ],
+    "publisher": "ZionLux",
+    "copyright": "© 2025 ZionLux. All rights reserved.",
+    "shortDescription": "Interface gráfica para o MarkItDown da Microsoft",
+    "longDescription": "Markitdown GUI é uma interface gráfica moderna para o MarkItDown da Microsoft, permitindo converter documentos PDF, Word, PowerPoint, Excel, HTML e muito mais para Markdown com facilidade.",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {
+        "language": "pt-BR"
+      },
+      "nsis": {
+        "languages": ["Portuguese"],
+        "displayLanguageSelector": false,
+        "installMode": "both",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "installerSidebar": null,
+        "headerImage": null
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      },
+      "category": "Utility"
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.13"
+    }
   }
 }
