@@ -6,13 +6,9 @@ const config = {
   preprocess: vitePreprocess(),
 
   kit: {
-    // adapter-static gera HTML/JS/CSS puro — ideal para Tauri
     adapter: adapter({
-      fallback: 'index.html', // SPA mode
+      fallback: 'index.html',
     }),
-
-    // Tauri espera o build em dist/
-    outDir: 'build',
   },
 };
 
