@@ -41,28 +41,22 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "publisher": "ZionLux",
+    "copyright": "\u00a9 2025 ZionLux. All rights reserved.",
+    "category": "Utility",
+    "shortDescription": "Interface gr\u00e1fica para o MarkItDown da Microsoft",
+    "longDescription": "Markitdown GUI \u00e9 uma interface gr\u00e1fica moderna para o MarkItDown da Microsoft, permitindo converter documentos PDF, Word, PowerPoint, Excel, HTML e muito mais para Markdown com facilidade.",
     "externalBin": [
       "binaries/markitdown"
     ],
-    "publisher": "ZionLux",
-    "copyright": "© 2026 ZionLux. All rights reserved.",
-    "shortDescription": "Interface gráfica para o MarkItDown da Microsoft",
-    "longDescription": "Markitdown GUI é uma interface gráfica moderna para o MarkItDown da Microsoft, permitindo converter documentos PDF, Word, PowerPoint, Excel, HTML e muito mais para Markdown com facilidade.",
     "windows": {
-      "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
       "timestampUrl": "",
-      "wix": {
-        "language": "pt-BR"
-      },
       "nsis": {
         "languages": ["Portuguese"],
         "displayLanguageSelector": false,
         "installMode": "both",
-        "installerIcon": "icons/icon.ico",
-        "uninstallerIcon": "icons/icon.ico",
-        "installerSidebar": null,
-        "headerImage": null
+        "installerIcon": "icons/icon.ico"
       }
     },
     "linux": {
@@ -71,8 +65,7 @@
       },
       "appimage": {
         "bundleMediaFramework": true
-      },
-      "category": "Utility"
+      }
     },
     "macOS": {
       "minimumSystemVersion": "10.13"
