@@ -6,23 +6,45 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  # ── Cria o release draft antes dos builds ──────────────────────────────────
+  create-release:
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: windows-latest
-            target: x86_64-pc-windows-msvc
-            sidecar-name: markitdown-x86_64-pc-windows-msvc.exe
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-          - platform: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            sidecar-name: markitdown-x86_64-unknown-linux-gnu
+      - name: Create GitHub Release
+        id: create-release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Markitdown GUI ${{ github.ref_name }}"
+          releaseBody: |
+            ## Markitdown GUI ${{ github.ref_name }}
 
-    runs-on: ${{ matrix.platform }}
+            Interface gráfica para o [MarkItDown](https://github.com/microsoft/markitdown) da Microsoft.
+            Desenvolvido por **ZionLux**.
 
+            ### Download
+            - **Windows**: baixe o arquivo `.msi` ou `.exe` (NSIS)
+            - **Linux**: em breve (.AppImage, .deb, .rpm)
+
+            > **Nota:** Esta é uma versão beta. O recurso de arrastar arquivos pode não funcionar no Windows.
+          releaseDraft: true
+          prerelease: true
+
+  # ── Build Windows ──────────────────────────────────────────────────────────
+  build-windows:
+    needs: create-release
+    permissions:
+      contents: write
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,81 +58,85 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: x86_64-pc-windows-msvc
 
-      - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Download sidecar (Windows)
+        shell: pwsh
         run: |
-          sudo apt update
-          sudo apt install -y \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libfuse2 \
-            rpm
+          New-Item -ItemType Directory -Force -Path src-tauri/binaries | Out-Null
+          Invoke-WebRequest -Uri "$env:SIDECAR_URL_WINDOWS" -OutFile "src-tauri/binaries/markitdown-x86_64-pc-windows-msvc.exe"
+        env:
+          SIDECAR_URL_WINDOWS: ${{ secrets.SIDECAR_URL_WINDOWS }}
 
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Download sidecar binary
-        shell: bash
-        env:
-          SIDECAR_URL_WINDOWS: ${{ secrets.SIDECAR_URL_WINDOWS }}
-          SIDECAR_URL_LINUX: ${{ secrets.SIDECAR_URL_LINUX }}
-        run: |
-          mkdir -p src-tauri/binaries
-          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
-            curl -L "$SIDECAR_URL_WINDOWS" -o "src-tauri/binaries/${{ matrix.sidecar-name }}"
-          else
-            curl -L "$SIDECAR_URL_LINUX" -o "src-tauri/binaries/${{ matrix.sidecar-name }}"
-            chmod +x "src-tauri/binaries/${{ matrix.sidecar-name }}"
-          fi
-
-      - name: Build Tauri app (Windows)
-        if: matrix.platform == 'windows-latest'
+      - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Markitdown GUI ${{ github.ref_name }}
-          releaseBody: |
-            ## Markitdown GUI ${{ github.ref_name }}
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: --target x86_64-pc-windows-msvc
 
-            Interface gráfica para o [MarkItDown](https://github.com/microsoft/markitdown) da Microsoft.
-            Desenvolvido por **ZionLux**.
+  # ── Build Linux (desabilitado até sidecar Linux estar disponível) ──────────
+  # build-linux:
+  #   needs: create-release
+  #   permissions:
+  #     contents: write
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #         cache: npm
+  #     - uses: dtolnay/rust-toolchain@stable
+  #     - uses: Swatinem/rust-cache@v2
+  #       with:
+  #         workspaces: src-tauri
+  #     - name: Install Linux dependencies
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get install -y \
+  #           libwebkit2gtk-4.1-dev libappindicator3-dev \
+  #           librsvg2-dev patchelf libfuse2 rpm
+  #     - name: Download sidecar (Linux)
+  #       run: |
+  #         mkdir -p src-tauri/binaries
+  #         curl -L "$SIDECAR_URL_LINUX" -o src-tauri/binaries/markitdown-x86_64-unknown-linux-gnu
+  #         chmod +x src-tauri/binaries/markitdown-x86_64-unknown-linux-gnu
+  #       env:
+  #         SIDECAR_URL_LINUX: ${{ secrets.SIDECAR_URL_LINUX }}
+  #     - run: npm ci
+  #     - uses: tauri-apps/tauri-action@v0
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         releaseId: ${{ needs.create-release.outputs.release_id }}
+  #         args: --target x86_64-unknown-linux-gnu --bundles appimage,deb,rpm
 
-            ### Download
-            - **Windows**: baixe o arquivo `.msi` ou `.exe`
-            - **Linux**: baixe o `.AppImage`, `.deb` ou `.rpm`
-
-            ### Nota
-            Esta é uma versão beta. O recurso de arrastar arquivos pode não funcionar no Windows.
-          releaseDraft: false
-          prerelease: true
-          args: --target ${{ matrix.target }}
-
-      - name: Build Tauri app (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
-        uses: tauri-apps/tauri-action@v0
+  # ── Publica o release após todos os builds ─────────────────────────────────
+  publish-release:
+    needs: [create-release, build-windows]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+              draft: false
+            })
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Markitdown GUI ${{ github.ref_name }}
-          releaseBody: |
-            ## Markitdown GUI ${{ github.ref_name }}
-
-            Interface gráfica para o [MarkItDown](https://github.com/microsoft/markitdown) da Microsoft.
-            Desenvolvido por **ZionLux**.
-
-            ### Download
-            - **Windows**: baixe o arquivo `.msi` ou `.exe`
-            - **Linux**: baixe o `.AppImage`, `.deb` ou `.rpm`
-
-            ### Nota
-            Esta é uma versão beta. O recurso de arrastar arquivos pode não funcionar no Windows.
-          releaseDraft: false
-          prerelease: true
-          args: --target ${{ matrix.target }} --bundles appimage,deb,rpm
