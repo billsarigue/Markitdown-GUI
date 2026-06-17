@@ -32,13 +32,16 @@
     if (valid.length > 0) dispatch('filesSelected', { paths: valid });
   }
 
-  // Necessário para o cursor não mostrar 🚫 no WebView2
-  function onDragOver(e: DragEvent) {
+  function preventDefaults(e: Event) {
     e.preventDefault();
     e.stopPropagation();
   }
 
   onMount(async () => {
+    // Previne o 🚫 do WebView2 em toda a janela
+    document.addEventListener('dragover', preventDefaults);
+    document.addEventListener('drop', preventDefaults);
+
     unlistenEnter = await listen<{ paths: string[] }>('drag-enter', () => {
       isDragging = true;
     });
@@ -52,6 +55,8 @@
   });
 
   onDestroy(() => {
+    document.removeEventListener('dragover', preventDefaults);
+    document.removeEventListener('drop', preventDefaults);
     unlistenDrop?.();
     unlistenEnter?.();
     unlistenLeave?.();
@@ -76,7 +81,6 @@
   class:is-dragging={isDragging}
   role="button"
   tabindex="0"
-  on:dragover={onDragOver}
   on:click={pickFiles}
   on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && pickFiles()}
 >
