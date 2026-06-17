@@ -32,31 +32,20 @@
     if (valid.length > 0) dispatch('filesSelected', { paths: valid });
   }
 
-  function preventDefaults(e: Event) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
   onMount(async () => {
-    // Previne o 🚫 do WebView2 em toda a janela
-    document.addEventListener('dragover', preventDefaults);
-    document.addEventListener('drop', preventDefaults);
-
-    unlistenEnter = await listen<{ paths: string[] }>('drag-enter', () => {
+    unlistenEnter = await listen<{ paths: string[] }>('tauri://drag-enter', () => {
       isDragging = true;
     });
-    unlistenLeave = await listen('drag-leave', () => {
+    unlistenLeave = await listen('tauri://drag-leave', () => {
       isDragging = false;
     });
-    unlistenDrop = await listen<{ paths: string[] }>('drag-drop', (e) => {
+    unlistenDrop = await listen<{ paths: string[] }>('tauri://drag-drop', (e) => {
       isDragging = false;
       validatePaths(e.payload.paths);
     });
   });
 
   onDestroy(() => {
-    document.removeEventListener('dragover', preventDefaults);
-    document.removeEventListener('drop', preventDefaults);
     unlistenDrop?.();
     unlistenEnter?.();
     unlistenLeave?.();
