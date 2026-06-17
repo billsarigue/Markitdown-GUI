@@ -6,63 +6,111 @@ on:
       - 'v*'
 
 jobs:
-  build:
+  release:
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-          - os: windows-latest
+          - platform: windows-latest
             target: x86_64-pc-windows-msvc
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: macos-13
-            target: x86_64-apple-darwin
+            sidecar-name: markitdown-x86_64-pc-windows-msvc.exe
 
-    runs-on: ${{ matrix.os }}
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            sidecar-name: markitdown-x86_64-unknown-linux-gnu
+
+    runs-on: ${{ matrix.platform }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Python dependencies
-        run: pip install -r python-sidecar/requirements.txt
-
-      - name: Build Python sidecar
-        run: python python-sidecar/build.py
-
-      - name: Install Rust
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
       - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libfuse2 \
+            rpm
 
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build Tauri app
+      - name: Download sidecar binary
+        shell: bash
+        env:
+          SIDECAR_URL_WINDOWS: ${{ secrets.SIDECAR_URL_WINDOWS }}
+          SIDECAR_URL_LINUX: ${{ secrets.SIDECAR_URL_LINUX }}
+        run: |
+          mkdir -p src-tauri/binaries
+          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
+            curl -L "$SIDECAR_URL_WINDOWS" -o "src-tauri/binaries/${{ matrix.sidecar-name }}"
+          else
+            curl -L "$SIDECAR_URL_LINUX" -o "src-tauri/binaries/${{ matrix.sidecar-name }}"
+            chmod +x "src-tauri/binaries/${{ matrix.sidecar-name }}"
+          fi
+
+      - name: Build Tauri app (Windows)
+        if: matrix.platform == 'windows-latest'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Markitdown GUI ${{ github.ref_name }}'
-          releaseDraft: true
-          prerelease: false
+          releaseName: Markitdown GUI ${{ github.ref_name }}
+          releaseBody: |
+            ## Markitdown GUI ${{ github.ref_name }}
+
+            Interface gráfica para o [MarkItDown](https://github.com/microsoft/markitdown) da Microsoft.
+            Desenvolvido por **ZionLux**.
+
+            ### Download
+            - **Windows**: baixe o arquivo `.msi` ou `.exe`
+            - **Linux**: baixe o `.AppImage`, `.deb` ou `.rpm`
+
+            ### Nota
+            Esta é uma versão beta. O recurso de arrastar arquivos pode não funcionar no Windows.
+          releaseDraft: false
+          prerelease: true
           args: --target ${{ matrix.target }}
+
+      - name: Build Tauri app (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Markitdown GUI ${{ github.ref_name }}
+          releaseBody: |
+            ## Markitdown GUI ${{ github.ref_name }}
+
+            Interface gráfica para o [MarkItDown](https://github.com/microsoft/markitdown) da Microsoft.
+            Desenvolvido por **ZionLux**.
+
+            ### Download
+            - **Windows**: baixe o arquivo `.msi` ou `.exe`
+            - **Linux**: baixe o `.AppImage`, `.deb` ou `.rpm`
+
+            ### Nota
+            Esta é uma versão beta. O recurso de arrastar arquivos pode não funcionar no Windows.
+          releaseDraft: false
+          prerelease: true
+          args: --target ${{ matrix.target }} --bundles appimage,deb,rpm
