@@ -140,7 +140,7 @@
           <div class="about-logo">M</div>
           <h2>Markitdown GUI</h2>
           <p>Interface gráfica para o <a href="https://github.com/microsoft/markitdown" target="_blank">MarkItDown</a> da Microsoft.</p>
-          <p class="built">Zionlux</p>
+          <p class="built">ZionLux</p>
           <div class="badges">
             <span>Tauri 2</span>
             <span>SvelteKit</span>
