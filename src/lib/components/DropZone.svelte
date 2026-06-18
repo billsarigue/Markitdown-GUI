@@ -33,10 +33,9 @@
   }
 
   onMount(async () => {
-    // Bloqueia o WebKit de abrir arquivos arrastados nativamente
+    // Impede o WebKit de navegar para o arquivo, mas não bloqueia o Tauri
     const preventDefault = (e: Event) => e.preventDefault();
     document.addEventListener('dragover', preventDefault);
-    document.addEventListener('drop', preventDefault);
 
     unlistenEnter = await listen<{ paths: string[] }>('tauri://drag-enter', () => {
       isDragging = true;
@@ -51,7 +50,6 @@
 
     return () => {
       document.removeEventListener('dragover', preventDefault);
-      document.removeEventListener('drop', preventDefault);
     };
   });
 
