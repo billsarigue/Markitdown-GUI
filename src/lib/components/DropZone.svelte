@@ -27,12 +27,17 @@
     const valid = paths.filter(isSupported);
     const invalid = paths.filter((p) => !isSupported(p));
     error = invalid.length > 0
-      ? `Tipo n\u00e3o suportado: ${invalid.map(p => p.split(/[\\/]/).pop()).join(', ')}`
+      ? `Tipo n\u00e3o suportado: ${invalid.map(p => p.split(/[\\\/]/).pop()).join(', ')}`
       : '';
     if (valid.length > 0) dispatch('filesSelected', { paths: valid });
   }
 
   onMount(async () => {
+    // Bloqueia o WebKit de abrir arquivos arrastados nativamente
+    const preventDefault = (e: Event) => e.preventDefault();
+    document.addEventListener('dragover', preventDefault);
+    document.addEventListener('drop', preventDefault);
+
     unlistenEnter = await listen<{ paths: string[] }>('tauri://drag-enter', () => {
       isDragging = true;
     });
@@ -43,6 +48,11 @@
       isDragging = false;
       validatePaths(e.payload.paths);
     });
+
+    return () => {
+      document.removeEventListener('dragover', preventDefault);
+      document.removeEventListener('drop', preventDefault);
+    };
   });
 
   onDestroy(() => {
